@@ -157,7 +157,7 @@ function Header() {
     const state = usePixelStore.getState();
     try {
       const blob = await exportPng(state.pixels, state.size, scale);
-      downloadBlob(blob, `pixl-${state.size}x${state.size}-${scale}x.png`);
+      downloadBlob(blob, `drixel-${state.size}x${state.size}-${scale}x.png`);
       toast.success(
         `PNG exportado · ${state.size * scale}×${state.size * scale}`,
       );
@@ -172,7 +172,7 @@ function Header() {
         <LogoMark />
         <div className="min-w-0">
           <p className="font-display text-lg leading-none tracking-tight text-fg">
-            PIXL
+            Drixel
           </p>
           <p className="hidden text-xs text-muted sm:block">
             Estúdio de pixel art
@@ -541,7 +541,7 @@ function useHotkeys() {
         event.preventDefault();
         const state = usePixelStore.getState();
         void exportPng(state.pixels, state.size, 16).then((blob) => {
-          downloadBlob(blob, `pixl-${state.size}x${state.size}-16x.png`);
+          downloadBlob(blob, `drixel-${state.size}x${state.size}-16x.png`);
           toast.success("PNG exportado");
         });
         return;
