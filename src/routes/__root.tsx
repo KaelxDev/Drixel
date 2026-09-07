@@ -1,11 +1,4 @@
-import {
-  createRootRoute,
-  HeadContent,
-  Outlet,
-  Scripts,
-} from "@tanstack/react-router";
-import { AuthProvider } from "@/lib/auth/provider";
-import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "PIXL";
@@ -19,37 +12,28 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Estúdio de pixel art com grade redimensionável, paletas retrô, lápis, borracha, preenchimento e exportação PNG.",
+          "Editor de pixel art com grade redimensionável, paletas retrô, ferramentas de desenho e exportação PNG.",
       },
       { name: "theme-color", content: "#0e0e0c" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      {
-        rel: "preconnect",
-        href: "https://fonts.gstatic.com",
-        crossOrigin: "anonymous",
-      },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Pixelify+Sans:wght@500;600&display=swap",
       },
       { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: "/__grok/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
     ],
   }),
   component: () => (
-    <html lang="pt" className="antialiased" suppressHydrationWarning>
+    <html lang="pt-BR" className="antialiased" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
-        <PreviewHostBridge />
-        <AuthProvider>
-          <Outlet />
-        </AuthProvider>
+        <Outlet />
         <Scripts />
       </body>
     </html>
