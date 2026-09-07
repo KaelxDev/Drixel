@@ -98,6 +98,20 @@
   grid-area: top;
 }
 
+/* Legacy source text in studio.tsx is hidden visually until that component is split. */
+.studio-top .font-display {
+  font-size: 0;
+  line-height: 1;
+}
+
+.studio-top .font-display::after {
+  content: "Drixel";
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
 .studio-tools {
   grid-area: tools;
 }
