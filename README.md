@@ -1,4 +1,4 @@
-# PIXL
+# Drixel
 
 Editor de pixel art para navegador, focado em uma experiência rápida, simples e responsiva.
 
@@ -61,7 +61,6 @@ src/
 └── styles.css
 
 public/                # Assets estáticos
-scripts/               # Scripts de projeto (quando necessários)
 ```
 
 ## Licença
