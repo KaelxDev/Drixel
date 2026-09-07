@@ -1,0 +1,166 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Pixelify Sans", "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas,
+    monospace;
+
+  --color-bg: #0e0e0c;
+  --color-surface: #181816;
+  --color-elevated: #22221e;
+  --color-stage: #141412;
+  --color-fg: #f2efe6;
+  --color-muted: #9c9890;
+  --color-subtle: #6f6c66;
+  --color-accent: #b8c4bc;
+  --color-accent-fg: #0e0e0c;
+  --color-border: #f2efe61f;
+  --color-ring: #b8c4bc;
+  --color-paper-a: #e6e1d4;
+  --color-paper-b: #d4cfc0;
+  --color-danger: #b4554a;
+  --color-danger-fg: #f2efe6;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --shadow-border: 0 0 0 1px #f2efe61a;
+  --shadow-border-hover: 0 0 0 1px #f2efe62e;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--color-bg);
+    color: var(--color-fg);
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-bg);
+    color: var(--color-fg);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+}
+
+:root {
+  --motion-stagger: 40ms;
+  --motion-micro: 80ms;
+  --motion-quick: 150ms;
+  --motion-fast: 250ms;
+  --motion-medium: 350ms;
+  --motion-slow: 400ms;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.studio {
+  display: grid;
+  height: 100dvh;
+  height: 100svh;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  user-select: none;
+  grid-template-areas:
+    "top"
+    "stage"
+    "palette"
+    "tools"
+    "bottom";
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.studio-top {
+  grid-area: top;
+}
+
+.studio-tools {
+  grid-area: tools;
+}
+
+.studio-stage {
+  grid-area: stage;
+}
+
+.studio-palette {
+  grid-area: palette;
+}
+
+.studio-bottom {
+  grid-area: bottom;
+}
+
+.canvas-frame {
+  background: var(--color-paper-a);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-fg) 8%, transparent),
+    0 18px 40px rgba(0, 0, 0, 0.38);
+}
+
+.swatch-empty {
+  background-color: var(--color-paper-a);
+  background-image:
+    linear-gradient(
+      45deg,
+      var(--color-paper-b) 25%,
+      transparent 25%,
+      transparent 75%,
+      var(--color-paper-b) 75%
+    ),
+    linear-gradient(
+      45deg,
+      var(--color-paper-b) 25%,
+      var(--color-paper-a) 25%,
+      var(--color-paper-a) 75%,
+      var(--color-paper-b) 75%
+    );
+  background-size: 8px 8px;
+  background-position:
+    0 0,
+    4px 4px;
+}
+
+@media (min-width: 1024px) {
+  .studio {
+    grid-template-areas:
+      "top top top"
+      "tools stage palette"
+      "bottom bottom bottom";
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
