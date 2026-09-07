@@ -1,7 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "PIXL";
+const APP_NAME = "Drixel";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -12,7 +12,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Editor de pixel art com grade redimensionável, paletas retrô, ferramentas de desenho e exportação PNG.",
+          "Drixel — editor de pixel art com grade redimensionável, paletas retrô, ferramentas de desenho e exportação PNG.",
       },
       { name: "theme-color", content: "#0e0e0c" },
     ],
