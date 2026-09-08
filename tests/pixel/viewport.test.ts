@@ -27,6 +27,26 @@ describe("pixel viewport", () => {
     expect(state.zoom).toBe(1);
   });
 
+  it("keeps the focal point fixed while zooming", () => {
+    const viewport = useViewportStore.getState();
+    viewport.panBy(24, -16);
+    viewport.zoomAt(2, 80, 40);
+
+    expect(useViewportStore.getState()).toMatchObject({
+      zoom: 2,
+      panX: -32,
+      panY: -72,
+    });
+  });
+
+  it("clamps focused zoom without losing the current pan relation", () => {
+    const viewport = useViewportStore.getState();
+    viewport.panBy(10, 20);
+    viewport.zoomAt(100, 0, 0);
+
+    expect(useViewportStore.getState().zoom).toBe(MAX_ZOOM);
+  });
+
   it("resets zoom and pan together", () => {
     const viewport = useViewportStore.getState();
     viewport.setZoom(4);
