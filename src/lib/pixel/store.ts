@@ -14,6 +14,7 @@ import {
   resizePixels,
   type Pixel,
 } from "./draw";
+import type { DrixeProject } from "./project";
 
 export type Tool = "pencil" | "eraser" | "fill" | "eyedropper";
 
@@ -104,6 +105,8 @@ type PixelState = {
   toggleGrid: () => void;
   setHover: (hover: { x: number; y: number } | null) => void;
   setSize: (size: GridSize) => void;
+  replaceCanvas: (size: GridSize, pixels: Pixel[]) => void;
+  loadProject: (project: DrixeProject) => void;
   applyCells: (indices: number[], color: Pixel) => boolean;
   fillAt: (x: number, y: number) => boolean;
   sampleAt: (x: number, y: number) => void;
@@ -153,6 +156,8 @@ export const usePixelStore = create<PixelState>((set, get) => ({
       color,
       showGrid: saved.showGrid ?? true,
       brush: isBrushSize(rawBrush) ? rawBrush : 1,
+      history: [],
+      future: [],
     });
     persist(get());
   },
@@ -195,6 +200,30 @@ export const usePixelStore = create<PixelState>((set, get) => ({
     const history = [...state.history, snapshotOf(state)].slice(-MAX_HISTORY);
     const pixels = resizePixels(state.pixels, state.size, size);
     set({ size, pixels, history, future: [], hover: null });
+    persist(get());
+  },
+
+  replaceCanvas: (size, pixels) => {
+    if (pixels.length !== size * size) return;
+    const state = get();
+    const history = [...state.history, snapshotOf(state)].slice(-MAX_HISTORY);
+    set({ size, pixels: pixels.slice(), history, future: [], hover: null });
+    persist(get());
+  },
+
+  loadProject: (project) => {
+    set({
+      size: project.size,
+      pixels: project.pixels.slice(),
+      paletteId: project.paletteId,
+      color: project.color,
+      brush: project.brush,
+      showGrid: project.showGrid,
+      history: [],
+      future: [],
+      hover: null,
+      tool: "pencil",
+    });
     persist(get());
   },
 
