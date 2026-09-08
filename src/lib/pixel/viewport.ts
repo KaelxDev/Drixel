@@ -42,7 +42,8 @@ type ViewportState = {
   setZoom: (zoom: number) => void;
   zoomIn: () => void;
   zoomOut: () => void;
-  setPan: (x: number, y: number) => void;
+  zoomAt: (zoom: number, focalX: number, focalY: number) => void;
+  setPan: (panX: number, panY: number) => void;
   panBy: (x: number, y: number) => void;
   resetView: () => void;
 };
@@ -53,10 +54,28 @@ export const useViewportStore = create<ViewportState>((set, get) => ({
   panY: 0,
 
   setZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
+
   zoomIn: () => get().setZoom(nextZoom(get().zoom, 1)),
+
   zoomOut: () => get().setZoom(nextZoom(get().zoom, -1)),
+
+  zoomAt: (zoom, focalX, focalY) => {
+    const state = get();
+    const nextZoom = clampZoom(zoom);
+    if (nextZoom === state.zoom) return;
+
+    const ratio = nextZoom / state.zoom;
+    set({
+      zoom: nextZoom,
+      panX: focalX - (focalX - state.panX) * ratio,
+      panY: focalY - (focalY - state.panY) * ratio,
+    });
+  },
+
   setPan: (panX, panY) => set({ panX, panY }),
+
   panBy: (x, y) =>
     set((state) => ({ panX: state.panX + x, panY: state.panY + y })),
+
   resetView: () => set({ zoom: 1, panX: 0, panY: 0 }),
 }));
