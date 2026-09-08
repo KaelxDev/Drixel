@@ -4,18 +4,21 @@ import type { Pixel } from "./operations";
 const paperA = hexToRgb(PAPER_A);
 const paperB = hexToRgb(PAPER_B);
 
+type RenderOptions = {
+  showGrid: boolean;
+  hover: { x: number; y: number } | null;
+  hoverColor: Pixel;
+  brush: number;
+  tool: "pencil" | "eraser" | "fill" | "eyedropper";
+  zoom: number;
+};
+
 export function renderPixels(
   ctx: CanvasRenderingContext2D,
   pixels: Pixel[],
   size: number,
   cssSize: number,
-  options: {
-    showGrid: boolean;
-    hover: { x: number; y: number } | null;
-    hoverColor: Pixel;
-    brush: number;
-    tool: "pencil" | "eraser" | "fill" | "eyedropper";
-  },
+  options: RenderOptions,
   offscreen: HTMLCanvasElement,
 ) {
   offscreen.width = size;
@@ -52,11 +55,12 @@ export function renderPixels(
   ctx.drawImage(offscreen, 0, 0, cssSize, cssSize);
 
   const cell = cssSize / size;
+  const physicalCell = cell * Math.max(options.zoom, 0.01);
 
   if (options.hover) {
     const { x, y } = options.hover;
     if (options.tool === "fill" || options.tool === "eyedropper") {
-      paintHoverCell(ctx, x, y, cell, options.hoverColor, options.tool);
+      paintHoverCell(ctx, x, y, cell, options.hoverColor, options.tool, options.zoom);
     } else {
       const left = x - Math.floor((options.brush - 1) / 2);
       const top = y - Math.floor((options.brush - 1) / 2);
@@ -70,6 +74,7 @@ export function renderPixels(
               cell,
               options.tool === "eraser" ? null : options.hoverColor,
               options.tool,
+              options.zoom,
             );
           }
         }
@@ -77,10 +82,10 @@ export function renderPixels(
     }
   }
 
-  if (options.showGrid && cell >= 4) {
+  if (options.showGrid && physicalCell >= 4) {
     ctx.save();
     ctx.strokeStyle = "rgba(14, 14, 12, 0.22)";
-    ctx.lineWidth = Math.max(1, cell / 16);
+    ctx.lineWidth = 1 / Math.max(options.zoom, 0.01);
     ctx.beginPath();
     for (let i = 1; i < size; i++) {
       const p = i * cell;
@@ -101,12 +106,13 @@ function paintHoverCell(
   cell: number,
   color: Pixel,
   tool: "pencil" | "eraser" | "fill" | "eyedropper",
+  zoom: number,
 ) {
   ctx.save();
   if (tool === "eyedropper") {
     ctx.strokeStyle = "rgba(14, 14, 12, 0.7)";
-    ctx.lineWidth = Math.max(1, cell / 8);
-    ctx.strokeRect(x * cell + 0.5, y * cell + 0.5, cell - 1, cell - 1);
+    ctx.lineWidth = 1 / Math.max(zoom, 0.01);
+    ctx.strokeRect(x * cell + 0.5 / Math.max(zoom, 0.01), y * cell + 0.5 / Math.max(zoom, 0.01), cell, cell);
   } else if (color) {
     ctx.fillStyle = color;
     ctx.globalAlpha = 0.45;
