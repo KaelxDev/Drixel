@@ -22,8 +22,9 @@ export async function importPng(
   file: File,
   fallbackSize: GridSize,
 ): Promise<ImportedImage> {
-  if (!file.type.startsWith("image/")) {
-    throw new Error("Selecione um arquivo de imagem válido.");
+  const isPng = file.type === "image/png" || /\.png$/i.test(file.name);
+  if (!isPng) {
+    throw new Error("Selecione um arquivo PNG válido.");
   }
 
   const bitmap = await createImageBitmap(file);
