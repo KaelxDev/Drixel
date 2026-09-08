@@ -1,18 +1,24 @@
 import {
   Download,
   Eraser,
+  FolderOpen,
   Grid3x3,
   HelpCircle,
+  Maximize2,
   Minus,
   PaintBucket,
   Pencil,
   Pipette,
   Plus,
   Redo2,
+  Save,
   Trash2,
   Undo2,
+  Upload,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -39,6 +45,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
@@ -49,6 +56,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { downloadBlob, exportPng } from "@/lib/pixel/draw";
+import { importPng } from "@/lib/pixel/import";
 import {
   BRUSH_SIZES,
   EXPORT_SCALES,
@@ -59,7 +67,13 @@ import {
   type ExportScale,
   type GridSize,
 } from "@/lib/pixel/palettes";
+import {
+  createProject,
+  downloadProject,
+  parseProject,
+} from "@/lib/pixel/project";
 import { usePixelStore, type Tool } from "@/lib/pixel/store";
+import { useViewportStore } from "@/lib/pixel/viewport";
 import { cn } from "@/lib/utils";
 import { PixelCanvas } from "./pixel-canvas";
 
@@ -146,10 +160,55 @@ function ToolButton({
   );
 }
 
+async function saveCurrentProject() {
+  const state = usePixelStore.getState();
+  try {
+    downloadProject(createProject(state));
+    toast.success("Projeto .drixe salvo");
+  } catch {
+    toast.error("Não foi possível salvar o projeto.");
+  }
+}
+
+async function loadProjectFile(file: File) {
+  try {
+    const project = parseProject(await file.text());
+    usePixelStore.getState().loadProject(project);
+    useViewportStore.getState().resetView();
+    toast.success(`Projeto carregado · ${project.size}×${project.size}`);
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : "Projeto inválido.");
+  }
+}
+
+async function loadImageFile(file: File) {
+  const currentSize = usePixelStore.getState().size;
+  try {
+    const imported = await importPng(file, currentSize);
+    usePixelStore.getState().replaceCanvas(imported.size, imported.pixels);
+    useViewportStore.getState().resetView();
+    const resized =
+      imported.sourceWidth !== imported.size ||
+      imported.sourceHeight !== imported.size;
+    toast.success(
+      resized
+        ? `PNG importado e ajustado para ${imported.size}×${imported.size}`
+        : `PNG importado · ${imported.size}×${imported.size}`,
+    );
+  } catch (error) {
+    toast.error(
+      error instanceof Error ? error.message : "Não foi possível importar o PNG.",
+    );
+  }
+}
+
 function Header() {
   const size = usePixelStore((s) => s.size);
   const history = usePixelStore((s) => s.history);
   const future = usePixelStore((s) => s.future);
+  const zoom = useViewportStore((s) => s.zoom);
+  const projectInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const canUndo = history.length > 0;
   const canRedo = future.length > 0;
 
@@ -164,6 +223,20 @@ function Header() {
     } catch {
       toast.error("Não foi possível exportar o PNG.");
     }
+  };
+
+  const onProjectChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) await loadProjectFile(file);
+  };
+
+  const onImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) await loadImageFile(file);
   };
 
   return (
@@ -183,7 +256,7 @@ function Header() {
       <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
         <ToolButton
           label="Desfazer"
-          shortcut="⌘Z"
+          shortcut="Ctrl/Cmd+Z"
           disabled={!canUndo}
           onClick={() => usePixelStore.getState().undo()}
         >
@@ -191,7 +264,7 @@ function Header() {
         </ToolButton>
         <ToolButton
           label="Refazer"
-          shortcut="⌘⇧Z"
+          shortcut="Ctrl/Cmd+Shift+Z"
           disabled={!canRedo}
           onClick={() => usePixelStore.getState().redo()}
         >
@@ -200,7 +273,78 @@ function Header() {
 
         <Separator orientation="vertical" className="mx-1 hidden h-6 sm:block" />
 
-        <ClearButton />
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="ghost" size="icon" aria-label="Projeto">
+                  <FolderOpen />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Projeto</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="end" className="min-w-52">
+            <DropdownMenuLabel>Projeto</DropdownMenuLabel>
+            <DropdownMenuItem onSelect={() => projectInputRef.current?.click()}>
+              <FolderOpen />
+              Abrir .drixe
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void saveCurrentProject()}>
+              <Save />
+              Salvar .drixe
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => imageInputRef.current?.click()}>
+              <Upload />
+              Importar PNG
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <input
+          ref={projectInputRef}
+          type="file"
+          accept=".drixe,application/json"
+          className="hidden"
+          onChange={onProjectChange}
+        />
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/png,image/*"
+          className="hidden"
+          onChange={onImageChange}
+        />
+
+        <div className="hidden items-center gap-0.5 sm:flex">
+          <ToolButton
+            label="Diminuir zoom"
+            onClick={() => useViewportStore.getState().zoomOut()}
+          >
+            <ZoomOut />
+          </ToolButton>
+          <button
+            type="button"
+            className="min-w-14 rounded-md px-2 text-center font-mono text-xs tabular-nums text-fg hover:bg-elevated"
+            onClick={() => useViewportStore.getState().resetView()}
+            aria-label="Redefinir zoom e posição"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <ToolButton
+            label="Aumentar zoom"
+            onClick={() => useViewportStore.getState().zoomIn()}
+          >
+            <ZoomIn />
+          </ToolButton>
+          <ToolButton
+            label="Centralizar tela"
+            onClick={() => useViewportStore.getState().resetView()}
+          >
+            <Maximize2 />
+          </ToolButton>
+        </div>
 
         <DropdownMenu>
           <Tooltip>
@@ -278,8 +422,11 @@ function ShortcutsDialog() {
     ["[  ]", "Espessura"],
     ["H", "Mostrar grade"],
     ["−  +", "Tamanho da grade"],
-    ["⌘Z", "Desfazer"],
-    ["⌘⇧Z", "Refazer"],
+    ["Ctrl/Cmd+S", "Salvar projeto .drixe"],
+    ["Ctrl/Cmd+Z", "Desfazer"],
+    ["Ctrl/Cmd+Shift+Z", "Refazer"],
+    ["Scroll", "Zoom"],
+    ["Espaço + arrastar", "Mover tela"],
     ["Clique direito", "Capturar cor"],
   ];
   return (
@@ -304,8 +451,8 @@ function ShortcutsDialog() {
         <DialogHeader>
           <DialogTitle>Atalhos</DialogTitle>
           <DialogDescription>
-            Desenhe com o ponteiro — o traço interpola pixels para não pular
-            células.
+            Desenhe com o ponteiro, use o scroll para aproximar e segure Espaço
+            para mover a tela.
           </DialogDescription>
         </DialogHeader>
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
@@ -495,17 +642,17 @@ function StatusBar() {
   const hover = usePixelStore((s) => s.hover);
   const size = usePixelStore((s) => s.size);
   const tool = usePixelStore((s) => s.tool);
+  const zoom = useViewportStore((s) => s.zoom);
   const toolLabel = TOOLS.find((t) => t.id === tool)?.label ?? tool;
 
   return (
     <footer className="studio-bottom flex items-center gap-4 border-t border-border bg-surface px-4 py-1.5 font-mono text-xs tabular-nums text-subtle">
       <span>{hover ? `${hover.x},${hover.y}` : "—,—"}</span>
-      <span>
-        {size}×{size}
-      </span>
+      <span>{size}×{size}</span>
+      <span>{Math.round(zoom * 100)}%</span>
       <span className="hidden sm:inline">{toolLabel}</span>
       <span className="ml-auto hidden text-xs tracking-wide md:inline">
-        Clique direito captura a cor
+        Clique direito captura a cor · Espaço move a tela
       </span>
     </footer>
   );
@@ -539,14 +686,15 @@ function useHotkeys() {
       }
       if (meta && key === "s") {
         event.preventDefault();
-        const state = usePixelStore.getState();
-        void exportPng(state.pixels, state.size, 16).then((blob) => {
-          downloadBlob(blob, `drixel-${state.size}x${state.size}-16x.png`);
-          toast.success("PNG exportado");
-        });
+        void saveCurrentProject();
         return;
       }
 
+      if (key === "0") {
+        event.preventDefault();
+        useViewportStore.getState().resetView();
+        return;
+      }
       if (key === "b" || key === "p") usePixelStore.getState().setTool("pencil");
       else if (key === "e") usePixelStore.getState().setTool("eraser");
       else if (key === "g" || key === "f")
