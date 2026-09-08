@@ -1,5 +1,10 @@
-import { emptyPixels, hexToRgb } from "./internal";
-import { type Pixel } from "./types";
+import { hexToRgb } from "./palettes";
+
+export type Pixel = string | null;
+
+export function emptyPixels(size: number): Pixel[] {
+  return Array.from({ length: size * size }, () => null);
+}
 
 export function resizePixels(
   pixels: Pixel[],
@@ -115,4 +120,4 @@ export function paintValue(
   return next;
 }
 
-export { emptyPixels, hexToRgb } from "./internal";
+export { hexToRgb } from "./palettes";
