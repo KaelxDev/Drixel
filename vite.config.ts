@@ -16,5 +16,5 @@ export default defineConfig({
     strictPort: true,
   },
   resolve: { tsconfigPaths: true },
-  plugins: [tailwindcss(), tanstackStart(), nitro({ preset: "vercel" }), viteReact()],
+  plugins: [tailwindcss(), tanstackStart(), nitro(), viteReact()],
 });
