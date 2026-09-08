@@ -12,6 +12,7 @@ Editor de pixel art para navegador, focado em uma experiência rápida, simples 
 - Radix UI
 - Lucide
 - Canvas 2D
+- Vitest
 
 ## Funcionalidades
 
@@ -22,6 +23,7 @@ Editor de pixel art para navegador, focado em uma experiência rápida, simples 
 - Undo/redo
 - Grade configurável
 - Atalhos de teclado
+- Persistência local
 - Exportação PNG em múltiplas escalas
 - Layout responsivo
 
@@ -39,6 +41,7 @@ Aplicação local: `http://localhost:8080`
 ```bash
 npm run typecheck
 npm run lint
+npm test
 npm run build
 ```
 
@@ -56,11 +59,14 @@ src/
 ├── lib/
 │   ├── pixel/        # Domínio, desenho, paletas e estado
 │   └── utils.ts
-├── routes/            # Rotas TanStack
+├── routes/           # Rotas TanStack
 ├── router.tsx
 └── styles.css
 
-public/                # Assets estáticos
+tests/
+└── pixel/            # Testes da engine e do estado
+
+public/               # Assets estáticos
 ```
 
 ## Licença
