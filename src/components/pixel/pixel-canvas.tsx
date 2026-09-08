@@ -6,16 +6,26 @@ import {
   renderPixels,
 } from "@/lib/pixel/draw";
 import { persistNow, usePixelStore } from "@/lib/pixel/store";
+import { useViewportStore } from "@/lib/pixel/viewport";
 
 export function PixelCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const offscreenRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const cssSizeRef = useRef(320);
   const drawingRef = useRef(false);
+  const panningRef = useRef(false);
   const dirtyRef = useRef(false);
+  const spaceHeldRef = useRef(false);
   const lastCellRef = useRef<{ x: number; y: number } | null>(null);
   const strokePushedRef = useRef(false);
+  const panStartRef = useRef<{
+    clientX: number;
+    clientY: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
 
   const size = usePixelStore((s) => s.size);
   const pixels = usePixelStore((s) => s.pixels);
@@ -24,6 +34,9 @@ export function PixelCanvas() {
   const brush = usePixelStore((s) => s.brush);
   const showGrid = usePixelStore((s) => s.showGrid);
   const hover = usePixelStore((s) => s.hover);
+  const zoom = useViewportStore((s) => s.zoom);
+  const panX = useViewportStore((s) => s.panX);
+  const panY = useViewportStore((s) => s.panY);
 
   const paintFrame = useCallback(() => {
     const canvas = canvasRef.current;
@@ -51,6 +64,18 @@ export function PixelCanvas() {
     );
   }, []);
 
+  const releasePointer = useCallback(
+    (event: React.PointerEvent<HTMLCanvasElement>) => {
+      try {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+      } catch {
+        /* ignore */
+      }
+    },
+  );
+
   const endStroke = useCallback(() => {
     if (!drawingRef.current) return;
     drawingRef.current = false;
@@ -58,12 +83,17 @@ export function PixelCanvas() {
     if (dirtyRef.current) {
       persistNow();
     } else if (strokePushedRef.current) {
-      usePixelStore.setState((s) => ({
-        history: s.history.slice(0, -1),
+      usePixelStore.setState((state) => ({
+        history: state.history.slice(0, -1),
       }));
     }
     dirtyRef.current = false;
     strokePushedRef.current = false;
+  }, []);
+
+  const endPan = useCallback(() => {
+    panningRef.current = false;
+    panStartRef.current = null;
   }, []);
 
   useLayoutEffect(() => {
@@ -87,9 +117,7 @@ export function PixelCanvas() {
       canvas.style.width = `${cssSize}px`;
       canvas.style.height = `${cssSize}px`;
       const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
+      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       paintFrame();
     };
 
@@ -104,10 +132,52 @@ export function PixelCanvas() {
   }, [pixels, size, showGrid, hover, color, brush, tool, paintFrame]);
 
   useEffect(() => {
-    const onBlur = () => endStroke();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code === "Space") {
+        const target = event.target as HTMLElement | null;
+        if (
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable)
+        ) {
+          return;
+        }
+        spaceHeldRef.current = true;
+        event.preventDefault();
+      }
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.code === "Space") {
+        spaceHeldRef.current = false;
+        event.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", () => {
+      spaceHeldRef.current = false;
+    });
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onBlur = () => {
+      endStroke();
+      endPan();
+    };
     window.addEventListener("blur", onBlur);
     return () => window.removeEventListener("blur", onBlur);
-  }, [endStroke]);
+  }, [endPan, endStroke]);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    frame.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${zoom})`;
+  }, [panX, panY, zoom]);
 
   const paintSegment = (
     from: { x: number; y: number } | null,
@@ -125,7 +195,33 @@ export function PixelCanvas() {
     if (state.applyCells(cells, value)) dirtyRef.current = true;
   };
 
+  const onWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const current = useViewportStore.getState();
+    const next = current.zoom * Math.exp(-event.deltaY * 0.002);
+    current.setZoom(next);
+  };
+
   const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const shouldPan = event.button === 1 || (event.button === 0 && spaceHeldRef.current);
+    if (shouldPan) {
+      event.preventDefault();
+      panningRef.current = true;
+      const viewport = useViewportStore.getState();
+      panStartRef.current = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+        panX: viewport.panX,
+        panY: viewport.panY,
+      };
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        /* synthetic pointer events have no active capture target */
+      }
+      return;
+    }
+
     if (event.button === 2) {
       event.preventDefault();
       const cell = pointerToCell(event.nativeEvent, event.currentTarget, size);
@@ -163,6 +259,16 @@ export function PixelCanvas() {
   };
 
   const onPointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (panningRef.current) {
+      const start = panStartRef.current;
+      if (!start) return;
+      useViewportStore.getState().setPan(
+        start.panX + event.clientX - start.clientX,
+        start.panY + event.clientY - start.clientY,
+      );
+      return;
+    }
+
     const cell = pointerToCell(event.nativeEvent, event.currentTarget, size);
     const current = usePixelStore.getState();
     if (!cell) {
@@ -185,34 +291,40 @@ export function PixelCanvas() {
   };
 
   const onPointerUp = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    try {
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
-    } catch {
-      /* ignore */
+    releasePointer(event);
+    if (panningRef.current) {
+      endPan();
+      return;
     }
     endStroke();
   };
 
   const onPointerLeave = () => {
+    if (panningRef.current) return;
     usePixelStore.getState().setHover(null);
     if (!drawingRef.current) lastCellRef.current = null;
   };
 
   const cursor =
-    tool === "eyedropper"
-      ? "cursor-copy"
-      : tool === "fill"
-        ? "cursor-cell"
-        : "cursor-crosshair";
+    spaceHeldRef.current || panningRef.current
+      ? "cursor-grab"
+      : tool === "eyedropper"
+        ? "cursor-copy"
+        : tool === "fill"
+          ? "cursor-cell"
+          : "cursor-crosshair";
 
   return (
     <div
       ref={stageRef}
       className="studio-stage relative grid min-h-0 place-items-center overflow-hidden bg-stage p-4"
+      onWheel={onWheel}
     >
-      <div className="canvas-frame relative">
+      <div
+        ref={frameRef}
+        className="canvas-frame relative"
+        style={{ transformOrigin: "center center", willChange: "transform" }}
+      >
         <canvas
           ref={canvasRef}
           className={`block touch-none ${cursor}`}
