@@ -22,10 +22,20 @@ Editor de pixel art para navegador, focado em uma experiência rápida, simples 
 - Paletas retrô
 - Undo/redo
 - Grade configurável
+- Zoom de 50% a 1600%
+- Pan com Espaço + arrastar ou botão do meio
 - Atalhos de teclado
 - Persistência local
+- Importação de PNG com escala nearest-neighbor
+- Salvamento e abertura de projetos `.drixe`
 - Exportação PNG em múltiplas escalas
 - Layout responsivo
+
+## Projeto `.drixe`
+
+O Drixel usa um formato de projeto JSON versionado com a extensão `.drixe`. O arquivo guarda a grade, pixels, paleta, cor, pincel e preferência de grade, permitindo editar o projeto novamente sem depender do navegador onde ele foi criado.
+
+A versão atual do formato é `1`.
 
 ## Desenvolvimento
 
@@ -45,6 +55,8 @@ npm test
 npm run build
 ```
 
+Essas verificações também são executadas automaticamente pelo GitHub Actions.
+
 ## Deploy
 
 O projeto é estruturado como uma aplicação standalone e pode ser conectado diretamente a um projeto Vercel com a raiz do repositório como Root Directory.
@@ -54,19 +66,19 @@ O projeto é estruturado como uma aplicação standalone e pode ser conectado di
 ```text
 src/
 ├── components/
-│   ├── pixel/        # Editor e canvas
+│   ├── pixel/        # Editor, canvas e controles
 │   └── ui/           # Primitivas reutilizáveis
 ├── lib/
-│   ├── pixel/        # Domínio, desenho, paletas e estado
+│   ├── pixel/        # Engine, estado, projetos, importação e viewport
 │   └── utils.ts
-├── routes/           # Rotas TanStack
+├── routes/            # Rotas TanStack
 ├── router.tsx
 └── styles.css
 
 tests/
-└── pixel/            # Testes da engine e do estado
+└── pixel/             # Testes da engine, estado, projeto e viewport
 
-public/               # Assets estáticos
+public/                # Assets estáticos
 ```
 
 ## Licença
