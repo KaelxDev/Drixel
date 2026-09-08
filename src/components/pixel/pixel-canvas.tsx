@@ -1,16 +1,7 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
-import {
-  bresenham,
-  brushCells,
-  pointerToCell,
-  renderPixels,
-} from "@/lib/pixel/draw";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { bresenham, brushCells } from "@/lib/pixel/operations";
+import { pointerToCell } from "@/lib/pixel/coordinates";
+import { renderPixels } from "@/lib/pixel/renderer";
 import { persistNow, usePixelStore } from "@/lib/pixel/store";
 import { useViewportStore } from "@/lib/pixel/viewport";
 
@@ -51,16 +42,14 @@ export function PixelCanvas() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    if (!offscreenRef.current) {
-      offscreenRef.current = document.createElement("canvas");
-    }
-    const cssSize = cssSizeRef.current;
+    if (!offscreenRef.current) offscreenRef.current = document.createElement("canvas");
+
     const state = usePixelStore.getState();
     renderPixels(
       ctx,
       state.pixels,
       state.size,
-      cssSize,
+      cssSizeRef.current,
       {
         showGrid: state.showGrid,
         hover: state.hover,
@@ -113,10 +102,7 @@ export function PixelCanvas() {
     const fit = () => {
       const rect = stage.getBoundingClientRect();
       const pad = 16;
-      const available = Math.max(
-        64,
-        Math.min(rect.width, rect.height) - pad * 2,
-      );
+      const available = Math.max(64, Math.min(rect.width, rect.height) - pad * 2);
       const cell = Math.max(1, Math.floor(available / size));
       const cssSize = cell * size;
       cssSizeRef.current = cssSize;
@@ -201,9 +187,7 @@ export function PixelCanvas() {
       ? bresenham(from.x, from.y, to.x, to.y)
       : ([[to.x, to.y]] as Array<[number, number]>);
     const cells: number[] = [];
-    for (const [x, y] of points) {
-      cells.push(...brushCells(x, y, state.size, state.brush));
-    }
+    for (const [x, y] of points) cells.push(...brushCells(x, y, state.size, state.brush));
     if (state.applyCells(cells, value)) dirtyRef.current = true;
   };
 
@@ -289,11 +273,7 @@ export function PixelCanvas() {
       lastCellRef.current = null;
       return;
     }
-    if (
-      !current.hover ||
-      current.hover.x !== cell.x ||
-      current.hover.y !== cell.y
-    ) {
+    if (!current.hover || current.hover.x !== cell.x || current.hover.y !== cell.y) {
       current.setHover(cell);
     }
     if (!drawingRef.current) return;
@@ -318,13 +298,14 @@ export function PixelCanvas() {
     if (!drawingRef.current) lastCellRef.current = null;
   };
 
-  const cursor = panning || spaceHeld
-    ? "cursor-grab"
-    : tool === "eyedropper"
-      ? "cursor-copy"
-      : tool === "fill"
-        ? "cursor-cell"
-        : "cursor-crosshair";
+  const cursor =
+    panning || spaceHeld
+      ? "cursor-grab"
+      : tool === "eyedropper"
+        ? "cursor-copy"
+        : tool === "fill"
+          ? "cursor-cell"
+          : "cursor-crosshair";
 
   return (
     <div
