@@ -22,7 +22,8 @@ export type Snapshot = {
   pixels: Pixel[];
 };
 
-const STORAGE_KEY = "pixl-v1";
+const STORAGE_KEY = "drixel-v1";
+const LEGACY_STORAGE_KEY = "pixl-v1";
 const MAX_HISTORY = 50;
 
 type Persisted = {
@@ -42,10 +43,10 @@ function isBrushSize(n: number | undefined): n is BrushSize {
   return typeof n === "number" && (BRUSH_SIZES as readonly number[]).includes(n);
 }
 
-function loadPersisted(): Partial<Persisted> | null {
+function readStorage(key: string): Partial<Persisted> | null {
   if (typeof localStorage === "undefined") return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const data = JSON.parse(raw) as Partial<Persisted>;
     if (!data || typeof data !== "object") return null;
@@ -53,6 +54,10 @@ function loadPersisted(): Partial<Persisted> | null {
   } catch {
     return null;
   }
+}
+
+function loadPersisted(): Partial<Persisted> | null {
+  return readStorage(STORAGE_KEY) ?? readStorage(LEGACY_STORAGE_KEY);
 }
 
 function persist(state: {
@@ -74,8 +79,9 @@ function persist(state: {
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
-    /* quota */
+    /* quota or unavailable storage */
   }
 }
 
@@ -148,6 +154,7 @@ export const usePixelStore = create<PixelState>((set, get) => ({
       showGrid: saved.showGrid ?? true,
       brush: isBrushSize(rawBrush) ? rawBrush : 1,
     });
+    persist(get());
   },
 
   setTool: (tool) => set({ tool }),
@@ -158,6 +165,7 @@ export const usePixelStore = create<PixelState>((set, get) => ({
       color,
       tool: tool === "eraser" || tool === "eyedropper" ? "pencil" : tool,
     });
+    persist(get());
   },
 
   setPalette: (id) => {
@@ -169,7 +177,10 @@ export const usePixelStore = create<PixelState>((set, get) => ({
     persist(get());
   },
 
-  setBrush: (brush) => set({ brush }),
+  setBrush: (brush) => {
+    set({ brush });
+    persist(get());
+  },
 
   toggleGrid: () => {
     set({ showGrid: !get().showGrid });
@@ -225,6 +236,7 @@ export const usePixelStore = create<PixelState>((set, get) => ({
       color: sampled,
       tool: sampled ? "pencil" : "eraser",
     });
+    persist(get());
   },
 
   clear: () => {
