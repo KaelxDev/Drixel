@@ -37,6 +37,42 @@ O Drixel usa um formato de projeto JSON versionado com a extensão `.drixe`. O a
 
 A versão atual do formato é `1`.
 
+## Arquitetura
+
+A lógica do editor é separada por responsabilidade:
+
+```text
+src/lib/pixel/
+├── operations.ts   # Operações puras de pixels
+├── coordinates.ts  # Conversão ponteiro → célula
+├── renderer.ts     # Renderização Canvas 2D
+├── export.ts       # Exportação e downloads PNG
+├── import.ts       # Importação de PNG
+├── project.ts      # Serialização/validação do .drixe
+├── palettes.ts     # Paletas e constantes do editor
+├── viewport.ts     # Zoom e pan
+├── store.ts        # Estado, histórico e persistência
+└── draw.ts         # Fachada de compatibilidade para imports antigos
+```
+
+A interface segue a mesma ideia:
+
+```text
+src/components/pixel/
+├── studio.tsx             # Composição do editor
+├── pixel-header.tsx       # Ações de projeto, zoom e exportação
+├── pixel-tools.tsx        # Ferramentas e tamanho da grade
+├── pixel-palette.tsx      # Paletas e cores
+├── pixel-status.tsx       # Barra de status
+├── pixel-canvas.tsx       # Interação com Canvas
+├── project-actions.ts     # Abrir/salvar/importar
+├── use-pixel-hotkeys.ts   # Atalhos globais do editor
+├── studio-config.ts       # Configuração compartilhada
+└── tool-button.tsx        # Controle reutilizável da toolbar
+```
+
+Esse desenho mantém o domínio de pixel art independente da composição visual e deixa o caminho aberto para recursos futuros como seleção, copy/paste e camadas.
+
 ## Desenvolvimento
 
 ```bash
@@ -61,25 +97,9 @@ Essas verificações também são executadas automaticamente pelo GitHub Actions
 
 O projeto é estruturado como uma aplicação standalone e pode ser conectado diretamente a um projeto Vercel com a raiz do repositório como Root Directory.
 
-## Estrutura
+## Testes
 
-```text
-src/
-├── components/
-│   ├── pixel/        # Editor, canvas e controles
-│   └── ui/           # Primitivas reutilizáveis
-├── lib/
-│   ├── pixel/        # Engine, estado, projetos, importação e viewport
-│   └── utils.ts
-├── routes/            # Rotas TanStack
-├── router.tsx
-└── styles.css
-
-tests/
-└── pixel/             # Testes da engine, estado, projeto e viewport
-
-public/                # Assets estáticos
-```
+Os testes ficam em `tests/pixel/` e cobrem a engine de pixels, estado, persistência/migração, formato `.drixe` e viewport.
 
 ## Licença
 
