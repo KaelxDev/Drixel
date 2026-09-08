@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   bresenham,
   brushCells,
@@ -26,6 +32,8 @@ export function PixelCanvas() {
     panX: number;
     panY: number;
   } | null>(null);
+  const [spaceHeld, setSpaceHeld] = useState(false);
+  const [panning, setPanning] = useState(false);
 
   const size = usePixelStore((s) => s.size);
   const pixels = usePixelStore((s) => s.pixels);
@@ -94,6 +102,7 @@ export function PixelCanvas() {
   const endPan = useCallback(() => {
     panningRef.current = false;
     panStartRef.current = null;
+    setPanning(false);
   }, []);
 
   useLayoutEffect(() => {
@@ -133,34 +142,37 @@ export function PixelCanvas() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.code === "Space") {
-        const target = event.target as HTMLElement | null;
-        if (
-          target &&
-          (target.tagName === "INPUT" ||
-            target.tagName === "TEXTAREA" ||
-            target.isContentEditable)
-        ) {
-          return;
-        }
-        spaceHeldRef.current = true;
-        event.preventDefault();
+      if (event.code !== "Space") return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
       }
+      spaceHeldRef.current = true;
+      setSpaceHeld(true);
+      event.preventDefault();
     };
     const onKeyUp = (event: KeyboardEvent) => {
-      if (event.code === "Space") {
-        spaceHeldRef.current = false;
-        event.preventDefault();
-      }
+      if (event.code !== "Space") return;
+      spaceHeldRef.current = false;
+      setSpaceHeld(false);
+      event.preventDefault();
+    };
+    const onBlur = () => {
+      spaceHeldRef.current = false;
+      setSpaceHeld(false);
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
-    window.addEventListener("blur", () => {
-      spaceHeldRef.current = false;
-    });
+    window.addEventListener("blur", onBlur);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
     };
   }, []);
 
@@ -198,15 +210,16 @@ export function PixelCanvas() {
   const onWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
     const current = useViewportStore.getState();
-    const next = current.zoom * Math.exp(-event.deltaY * 0.002);
-    current.setZoom(next);
+    current.setZoom(current.zoom * Math.exp(-event.deltaY * 0.002));
   };
 
   const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    const shouldPan = event.button === 1 || (event.button === 0 && spaceHeldRef.current);
+    const shouldPan =
+      event.button === 1 || (event.button === 0 && spaceHeldRef.current);
     if (shouldPan) {
       event.preventDefault();
       panningRef.current = true;
+      setPanning(true);
       const viewport = useViewportStore.getState();
       panStartRef.current = {
         clientX: event.clientX,
@@ -305,14 +318,13 @@ export function PixelCanvas() {
     if (!drawingRef.current) lastCellRef.current = null;
   };
 
-  const cursor =
-    spaceHeldRef.current || panningRef.current
-      ? "cursor-grab"
-      : tool === "eyedropper"
-        ? "cursor-copy"
-        : tool === "fill"
-          ? "cursor-cell"
-          : "cursor-crosshair";
+  const cursor = panning || spaceHeld
+    ? "cursor-grab"
+    : tool === "eyedropper"
+      ? "cursor-copy"
+      : tool === "fill"
+        ? "cursor-cell"
+        : "cursor-crosshair";
 
   return (
     <div
@@ -333,7 +345,7 @@ export function PixelCanvas() {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onPointerLeave={onPointerLeave}
-          onContextMenu={(e) => e.preventDefault()}
+          onContextMenu={(event) => event.preventDefault()}
           aria-label="Tela de pixel art"
         />
       </div>
